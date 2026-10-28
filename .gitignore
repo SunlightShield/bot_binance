@@ -1,15 +1,49 @@
+# --- Original del repo ---
 *.log
 .current_coin
 .current_coin_table
-*.pyc
-__pycache__
 nohup.out
-user.cfg
-.idea/
-.vscode/
-.replit
-venv/
-crypto_trading.db
 apprise.yml
-.DS_Store
+.replit
 .bot/
+crypto_trading.db
+
+# --- Secretos ---
+user.cfg
+.user.cfg
+.env
+.env.*
+*.env
+!user.cfg.example
+*.pem
+*.key
+secrets/
+
+# --- Datos y evidencia de pruebas ---
+data/
+logs/
+*.db
+*.sqlite
+*.sqlite3
+*.jsonl
+trades_testnet.json
+
+# --- Entornos y caché ---
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+node_modules/
+dist/
+
+# --- Editor / sistema ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Scratch ---
+*.bak
+*.tmp
