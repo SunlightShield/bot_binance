@@ -301,9 +301,14 @@ class BinanceAPIManager:
             except Exception as e:  # pylint: disable=broad-except
                 self.logger.warning(f"Unexpected Error: {e}")
 
-        trade_log.set_ordered(origin_balance, target_balance, order_quantity)
+        try:
+            trade_log.set_ordered(origin_balance, target_balance, order_quantity)
 
-        order_guard.set_order(origin_symbol, target_symbol, int(order["orderId"]))
+            order_guard.set_order(origin_symbol, target_symbol, int(order["orderId"]))
+        except BaseException:
+            # Si algo falla antes de esperar la orden, soltar el candado para no bloquear al bot
+            order_guard.release()
+            raise
         order = self.wait_for_order(order["orderId"], origin_symbol, target_symbol, order_guard)
 
         if order is None:
@@ -349,20 +354,25 @@ class BinanceAPIManager:
         self.logger.info(f"Balance is {origin_balance}")
         order = None
         order_guard = self.stream_manager.acquire_order_guard()
-        while order is None:
-            # Should sell at calculated price to avoid lost coin
-            order = self.binance_client.order_limit_sell(
-                symbol=origin_symbol + target_symbol,
-                quantity=(order_quantity_s),
-                price=from_coin_price_s,
-            )
+        try:
+            while order is None:
+                # Should sell at calculated price to avoid lost coin
+                order = self.binance_client.order_limit_sell(
+                    symbol=origin_symbol + target_symbol,
+                    quantity=(order_quantity_s),
+                    price=from_coin_price_s,
+                )
 
-        self.logger.info("order")
-        self.logger.info(order)
+            self.logger.info("order")
+            self.logger.info(order)
 
-        trade_log.set_ordered(origin_balance, target_balance, order_quantity)
+            trade_log.set_ordered(origin_balance, target_balance, order_quantity)
 
-        order_guard.set_order(origin_symbol, target_symbol, int(order["orderId"]))
+            order_guard.set_order(origin_symbol, target_symbol, int(order["orderId"]))
+        except BaseException:
+            # Si algo falla antes de esperar la orden, soltar el candado para no bloquear al bot
+            order_guard.release()
+            raise
         order = self.wait_for_order(order["orderId"], origin_symbol, target_symbol, order_guard)
 
         if order is None:

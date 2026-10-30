@@ -22,17 +22,27 @@ class Database:
         self.engine = create_engine(uri)
         self.SessionMaker = sessionmaker(bind=self.engine)
         self.socketio_client = Client()
-
+        self._socketio_retry_at = 0.0
+        self._socketio_url = os.environ.get("SOCKETIO_URL")
+    
     def socketio_connect(self):
+        # Sin SOCKETIO_URL definida no se intenta conectar a ningún servidor.
+        if not self._socketio_url:
+            return False
         if self.socketio_client.connected and self.socketio_client.namespaces:
             return True
+        # Si el servidor no responde, cada intento bloquea ~3 s:
+        # no reintentar durante 5 minutos tras un fallo.
+        if time.monotonic() < self._socketio_retry_at:
+            return False
         try:
             if not self.socketio_client.connected:
-                self.socketio_client.connect("http://api:5123", namespaces=["/backend"])
+                self.socketio_client.connect(self._socketio_url, namespaces=["/backend"])
             while not self.socketio_client.connected or not self.socketio_client.namespaces:
                 time.sleep(0.1)
             return True
         except SocketIOConnectionError:
+            self._socketio_retry_at = time.monotonic() + 300
             return False
 
     @contextmanager

@@ -73,10 +73,17 @@ class OrderGuard:
         # lock immediately because OrderGuard
         # should be entered and put tag that shouldn't be missed
         self.mutex.acquire()
+        self._held = True
         self.tag = None
 
     def set_order(self, origin_symbol: str, target_symbol: str, order_id: int):
         self.tag = (origin_symbol + target_symbol, order_id)
+
+    def release(self):
+        # Suelta el candado si todavia lo tiene este guard (error antes de entrar a wait_for_order)
+        if self._held:
+            self._held = False
+            self.mutex.release()
 
     def __enter__(self):
         try:
@@ -84,6 +91,7 @@ class OrderGuard:
                 raise Exception("OrderGuard wasn't properly set")
             self.pending_orders.add(self.tag)
         finally:
+            self._held = False
             self.mutex.release()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -94,7 +102,6 @@ class OrderGuard:
                 self.on_release(self.tag)
             except Exception:  # pylint: disable=broad-except
                 pass
-
 
 class TradeJournal:
     """Diario de operaciones: un .jsonl completo y un .json con las ultimas N."""
